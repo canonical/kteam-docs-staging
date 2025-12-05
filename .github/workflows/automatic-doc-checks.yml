@@ -22,3 +22,46 @@ jobs:
     with:
       working-directory: "docs"
       fetch-depth: 0
+
+  spellcheck-summary:
+    name: Extract spellcheck summary
+    needs: documentation-checks        # wait for all jobs inside the reusable workflow
+    if: always()                       # run even if spellcheck failed
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download logs
+        run: |
+          mkdir logs
+          gh run download ${{ github.run_id }} -n logs -D logs
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Extract misspellings
+        id: extract
+        run: |
+          FILE=$(grep -Rsl "Misspelled words:" logs || true)
+
+          if [ -z "$FILE" ]; then
+            echo "found=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Extract:
+          #   from first "Misspelled words:"
+          #   until the line BEFORE "!!!Spelling check failed!!!"
+          awk '
+            /Misspelled words:/ {start=1}
+            start && /!!!Spelling check failed!!!/ {exit}
+            start {print}
+          ' "$FILE" > summary.txt
+
+          echo "found=true" >> $GITHUB_OUTPUT
+
+      - name: Post PR comment
+        if: steps.extract.outputs.found == 'true' && github.event_name == 'pull_request'
+        run: |
+          gh pr comment ${{ github.event.pull_request.number }} \
+            --body-file summary.txt
+        env:
+          GH_TOKEN: ${{ github.token }}
+
