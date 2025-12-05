@@ -28,6 +28,7 @@ templates_path = ["_templates"]
 
 In most cases, you will need to copy the default templates from the [canonical-sphinx theme] as a starting point and edit as needed.
 
+lalalalala
 
 ```{seealso}
 Sphinx uses the Jinja templating engine for its HTML templates; see the [Jinja template syntax reference] for more details.
