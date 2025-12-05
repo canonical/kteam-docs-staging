@@ -32,8 +32,12 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
+      - name: Wait for logs to be available
+        run: sleep 60
+
       - name: Checkout repo (required for gh CLI)
         uses: actions/checkout@v4
+
 
       - name: Download workflow run logs
         run: |
