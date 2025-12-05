@@ -2,6 +2,8 @@
 
 # Use custom templates
 
+Just adding TBD TBD TBD.
+
 If the default template in the Starter Pack doesn't fully meet your needs -- whether you want a unique layout, a custom header or footer, or a specialized sidebar for certain pages -- you can create and use a custom template for your Sphinx project.
 
 This guide shows you how to extend or override the default templates in the Starter Pack to tailor the look and structure of your documentation.
@@ -26,6 +28,7 @@ templates_path = ["_templates"]
 
 In most cases, you will need to copy the default templates from the [canonical-sphinx theme] as a starting point and edit as needed.
 
+lalalalala
 
 ```{seealso}
 Sphinx uses the Jinja templating engine for its HTML templates; see the [Jinja template syntax reference] for more details.

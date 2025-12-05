@@ -3,6 +3,8 @@
 Customise the setup
 ===================
 
+Randomizor 
+
 .. important::
 
    After setting up your repository with the starter pack, you should track the changes made to the starter pack.
