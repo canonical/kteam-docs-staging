@@ -24,11 +24,13 @@ jobs:
       fetch-depth: 0
 
   spellcheck-summary:
-    name: Extract spellcheck summary
-    needs: documentation-checks        # wait for all jobs inside the reusable workflow
-    if: always()                       # run even if spellcheck failed
+    needs: documentation-checks
+    if: always()
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repo (required for gh CLI)
+        uses: actions/checkout@v4
+
       - name: Download logs
         run: |
           mkdir logs
@@ -36,23 +38,20 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
 
-      - name: Extract misspellings
+      - name: Extract Vale summary
         id: extract
         run: |
-          FILE=$(grep -Rsl "Misspelled words:" logs || true)
+          FILE=$(grep -Rsl "Running Vale against" logs || true)
 
           if [ -z "$FILE" ]; then
             echo "found=false" >> $GITHUB_OUTPUT
             exit 0
           fi
 
-          # Extract:
-          #   from first "Misspelled words:"
-          #   until the line BEFORE "!!!Spelling check failed!!!"
           awk '
-            /Misspelled words:/ {start=1}
-            start && /!!!Spelling check failed!!!/ {exit}
-            start {print}
+            /Running Vale against \*\./      {start=1; next}
+            start && /[0-9]+ errors?, [0-9]+ warnings? and [0-9]+ suggestions? in [0-9]+ files\./ {exit}
+            start                            {print}
           ' "$FILE" > summary.txt
 
           echo "found=true" >> $GITHUB_OUTPUT
