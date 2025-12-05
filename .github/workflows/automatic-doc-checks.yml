@@ -24,11 +24,13 @@ jobs:
       fetch-depth: 0
 
   spellcheck-summary:
-    name: Extract spellcheck summary
-    needs: documentation-checks        # wait for all jobs inside the reusable workflow
-    if: always()                       # run even if spellcheck failed
+    needs: documentation-checks
+    if: always()
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repo (required for gh CLI)
+        uses: actions/checkout@v4
+
       - name: Download logs
         run: |
           mkdir logs
