@@ -1,4 +1,3 @@
-#
 name: Automatic doc checks
 
 on:
@@ -6,15 +5,10 @@ on:
     branches: [ main ]
   pull_request:
     paths:
-      - 'docs/**'   # Only run on changes to the docs directory
+      - 'docs/**'
 
+  workflow_call:
   workflow_dispatch:
-    # Manual trigger
-
-permissions:
-  contents: read
-  actions: read
-  pull-requests: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -27,52 +21,29 @@ jobs:
       working-directory: "docs"
       fetch-depth: 0
 
-  spellcheck-summary:
+  download-spellcheck-logs:
+    name: Download Spell Check Logs
     needs: documentation-checks
-    if: always()
     runs-on: ubuntu-latest
     steps:
-      - name: Wait for logs to be available
-        run: sleep 60
-
-      - name: Checkout repo (required for gh CLI)
-        uses: actions/checkout@v4
-
-
-      - name: Download workflow run logs
+      - name: Download logs archive
         run: |
           curl \
-            -H "Authorization: Bearer ${{ github.token }}" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
             -L \
-            -o logs.zip \
-            "https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/logs"
+            "https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/logs" \
+            -o logs.zip
 
-          mkdir logs
-          unzip logs.zip -d logs
-
-      - name: Extract Vale summary
-        id: extract
+      - name: Extract only Spell Check logs
         run: |
-          FILE=$(grep -Rsl "Running Vale against" logs || true)
+          mkdir spellcheck
+          unzip logs.zip
+          # Find any step containing "Spell Check"
+          find . -type f -iname "*spell*" -exec cp {} spellcheck/ \;
 
-          if [ -z "$FILE" ]; then
-            echo "found=false" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          awk '
-            /Running Vale against \*\./      {start=1; next}
-            start && /[0-9]+ errors?, [0-9]+ warnings? and [0-9]+ suggestions? in [0-9]+ files\./ {exit}
-            start                            {print}
-          ' "$FILE" > summary.txt
-
-          echo "found=true" >> $GITHUB_OUTPUT
-
-      - name: Post PR comment
-        if: steps.extract.outputs.found == 'true' && github.event_name == 'pull_request'
-        run: |
-          gh pr comment ${{ github.event.pull_request.number }} \
-            --body-file summary.txt
-        env:
-          GH_TOKEN: ${{ github.token }}
-
+      - name: Upload Spell Check logs artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: spellcheck-logs
+          path: spellcheck
