@@ -10,6 +10,10 @@ on:
   workflow_call:
   workflow_dispatch:
 
+permissions:
+  actions: read
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -27,24 +31,36 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - name: Download logs archive
+      - name: Find child workflow run ID
+        id: find_run
         run: |
-          curl \
-            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Accept: application/vnd.github+json" \
-            -L \
-            "https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/logs" \
-            -o logs.zip
+          echo "Finding child reusable workflow run..."
+          RUN_ID=$(gh run list \
+            --json databaseId,event,headSha,workflowName \
+            --jq "
+              map(
+                select(.event == \"workflow_call\") |
+                select(.headSha == \"${{ github.sha }}\") |
+                select(.workflowName == \"Automatic documentation checks\")
+              )[0].databaseId
+            ")
+          
+          echo "child_run_id=$RUN_ID" >> $GITHUB_OUTPUT
+
+      - name: Download child logs
+        run: |
+          echo "Child run ID: ${{ steps.find_run.outputs.child_run_id }}"
+          gh run download ${{ steps.find_run.outputs.child_run_id }} \
+            --repo ${{ github.repository }} \
+            -D logs
 
       - name: Extract only Spell Check logs
         run: |
           mkdir spellcheck
-          unzip logs.zip
-          find . -type f -iname "*spell*" -exec cp {} spellcheck/ \;
+          find logs -type f -iname "*spell*" -exec cp {} spellcheck/ \;
 
       - name: Upload Spell Check logs artifact
         uses: actions/upload-artifact@v4
         with:
           name: spellcheck-logs
           path: spellcheck
-
