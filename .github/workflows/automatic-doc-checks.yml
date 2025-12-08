@@ -24,6 +24,7 @@ jobs:
   download-spellcheck-logs:
     name: Download Spell Check Logs
     needs: documentation-checks
+    if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Download logs archive
@@ -39,7 +40,6 @@ jobs:
         run: |
           mkdir spellcheck
           unzip logs.zip
-          # Find any step containing "Spell Check"
           find . -type f -iname "*spell*" -exec cp {} spellcheck/ \;
 
       - name: Upload Spell Check logs artifact
@@ -47,3 +47,4 @@ jobs:
         with:
           name: spellcheck-logs
           path: spellcheck
+
